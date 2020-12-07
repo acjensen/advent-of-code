@@ -58,12 +58,30 @@ class PasswordLoader(object):
         return num_valid_passwords
 
 
-if __name__ == "__main__":
+# Load the input file into memory.
+filepath = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), "input.txt")
 
-    # Load the input file into memory.
-    filepath = os.path.join(os.path.dirname(
-        os.path.abspath(__file__)), "input.txt")
+# Load the input file and count the number of valid passwords.
+part_1_result = PasswordLoader(filepath).num_valid_passwords()
+print(part_1_result)
 
-    # Load the input file and count the number of valid passwords.
-    part_1_result = PasswordLoader(filepath).num_valid_passwords()
-    print(part_1_result)
+# For part 2, we need to edit the 'is_valid' function in the Password class.
+# Lets just monkey-patch it here.
+def is_valid_2(self):
+    # Each policy describes two positions in the password, where 1 means the first
+    # character, 2 means the second character, and so on, with indexing starting from 1.
+    # Exactly one of these positions must contain the given letter.
+
+    def password_has_char_at_index(password_index: int) -> bool:
+        password_index -= 1
+        if password_index < len(self.password):
+            return self.password[password_index] != self.limited_char
+        else:
+            return True
+
+    return password_has_char_at_index(self.high) ^ password_has_char_at_index(self.low)
+
+Password.is_valid = is_valid_2 # Monkey patch
+part_2_result = PasswordLoader(filepath).num_valid_passwords()
+print(part_2_result)
