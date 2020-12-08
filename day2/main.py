@@ -58,7 +58,7 @@ class PasswordLoader(object):
         return num_valid_passwords
 
 
-# Load the input file into memory.
+# Get the full path to the input file.
 filepath = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), "input.txt")
 
