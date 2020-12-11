@@ -11,140 +11,89 @@ def load_adapters(filepath) -> str:
         return [int(line) for line in f.readlines()]
 
 
+# Load the adapters and sort them.
 adapters = load_adapters(input_filepath)
 adapters = sorted(adapters)
-print(adapters)
-
-differences = []
 
 
-for i in range(len(adapters) - 1):
-    differences.append(adapters[i+1]-adapters[i])
+def part_1():
+    '''In part 1:
+    Simply loop through the ordered list of adapters and calculate the difference.
+    '''
 
-differences.append(adapters[0]-0)  # wall to adapter
-differences.append(3)  # addapter to phone
+    differences = []
 
-print(differences)
+    for i in range(len(adapters) - 1):
+        differences.append(adapters[i+1]-adapters[i])
 
-num_of_1s = len([d for d in differences if d == 1])
-num_of_3s = len([d for d in differences if d == 3])
-print('Num 1s:', num_of_1s)
-print('Num 3s:', num_of_3s)
-print('Part 1:', num_of_1s*num_of_3s)
+    differences.append(adapters[0]-0)  # wall to adapter
+    differences.append(3)  # adapter to phone
 
-# Part 2.... What is the total number of distinct ways you can arrange the adapters to connect the charging outlet to your device?
-
-last_i = len(adapters)
-
-# idea: index/cache the numbers if already followed
-# build adjacency list or matrix
-# then you're just finding paths to the
-# we know there is a path from every node already
-# so...
-
-# 1. sort list
-# 2. count how many option to the next ones
-# 3. multiply resulting array
+    num_of_1s = len([d for d in differences if d == 1])
+    num_of_3s = len([d for d in differences if d == 3])
+    print(f'Part 1: {num_of_1s*num_of_3s}')
 
 
-# def get_compatible(i):
-#     while (True):
-#         if i == last_i:
-#             # Connected to wall.
-#             return True
-#         diff = adapters[i+1] - adapters[i]
-#         if diff < 3:
-#             return get_compatible(i+1)
-#         if diff == 3:
-#             break
-# 19208
-things = []
-n = 3
-for i in range(len(adapters)):
-    j = 1
-    num_compatible = 0
-    while True:
-        if i + j > len(adapters)-1:
-            break
-        if adapters[i+j] - adapters[i] > n:
-            break
-        num_compatible += 1
-        j += 1
-    things.append(num_compatible)
+def part_2():
+    '''In part 2:
+    1. Create an graph of possible configurations with an adjacency list.
+    2. Run a depth-first-search on the graph while keeping track of the number of paths to the phone at each node of the graph.
+    '''
 
-print(things)
+    # Largest possible adapter connection joltage difference.
+    n = 3
 
-mults = []
-for i, t in enumerate(things):
-    m = 1
-    for j in range(t):
-        if things[i+j] == 0:
-            break
-        m *= things[i+j]
-    mults.append(m)
+    # Put the 0 jolt wall connection at the front of the list,
+    # and the phone with adapter+3 jolts at the end.
+    adapters.insert(0, 0)
+    adapters.append(adapters[-1]+n)
 
-print(mults)
+    # Create an adacency list to represent a Directed Acyclic Graph (DFS)
+    # of all possible adapter combinations.
+    #
+    # We'll loop through adapters `i` and try consecutive adapters `i+j`.
+    # Break if we reach the end of the list, or if we encounter an incompatible adapter.
+    adjacency_list = {}
+    for i in range(len(adapters)):
+        j = 1
+        adjacency = []
+        while True:
+            # Check if we've reach the end of the adapter list.
+            if i + j > len(adapters)-1:
+                break
+            # If the difference between this node `i` and other node `i+j`
+            # is greater than possible adapter connection, stop looking for
+            # compatible adapters.
+            if adapters[i+j] - adapters[i] > n:
+                break
+            adjacency.append(i+j)
+            j += 1
+        adjacency_list[i] = adjacency
 
-things.pop()
-answer = 1
-for m in things:
-    answer *= m
-print(answer)
+    # The number of paths from node A to node B is the sum of
+    # number of paths of A's children to node B.
+    #
+    # Here we use a depth first search from `start_n` to `target_n`.
+    # We store each node's `path_count` to avoid expensive recalculations.
 
+    start_n = 0
+    target_n = len(adjacency_list)-1
+    path_count = defaultdict(lambda: 0)  # missing keys default to value of 0
 
-# This is a Directed Acyclic Graph (DAG).
-# We'll perform the following algorithm:
-# 0. Topologically sort the graph (already done).
-# 1. scan the vertices from the target backwards to the source.
-# 2. For each vertex v, keep a count of the number of paths from v to the target.
-# 3. When you get to the source, the value of that count is the answer.
-# Complexity is O(V+E).
-n = 3
-adjacency_list = []
-for i in range(len(adapters)):
-    j = 1
-    adjacency = []
-    while True:
-        if i + j > len(adapters)-1:
-            break
-        if adapters[i+j] - adapters[i] > n:
-            break
-        adjacency.append(i+j)
-        j += 1
-    adjacency_list.append(adjacency)
-
-print(adjacency_list)
-
-
-def default_value():
-    return []
-
-
-# reverse the adjacency list
-reverse_adjacency_list = defaultdict(default_value)
-for u in range(len(adjacency_list)):
-    for v in adjacency_list[u]:
-        reverse_adjacency_list[v].append(u)
-
-
-# find all paths on the DAG from 1 to 30
-# if visited, just stop and add 1 to counter
-visited = [0]*len(adjacency_list)
-n_target = len(adjacency_list)
-n_start = 30
-
-
-def dfs(n, visited):
-    visited[n] += 1
-    for m in reverse_adjacency_list[n]:
-        if m == n_target:
-            visited[m] += 1
-        if visited[m]:
-            # count += 1
-            visited[m] += 1
+    def depth_first_search(n):
+        if n == target_n:
+            return 1
         else:
-            dfs(m, visited)
+            # If we haven't counted paths to n, go get them. Otherwise just return the path count for n.
+            if n not in path_count:
+                # The paths from n to target_n is sum of number of paths of n's children to the target.
+                for m in adjacency_list[n]:
+                    path_count[n] += depth_first_search(m)
+            return path_count[n]
+
+    total_path_count = depth_first_search(start_n)
+    print(f'Part 2: {total_path_count}')
 
 
-dfs(30, visited)
-print(visited)
+part_1()
+part_2()
