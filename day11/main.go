@@ -26,11 +26,10 @@ func main() {
 	my_seatmap := load_seatmaps(s)
 
 	// Run part 1 and part 2 simulations.
-	part_1 := sim_func_maker(adjacent_seats, 4, false)
-	part_2 := sim_func_maker(adjacent_seats, 5, true)
+	part_1 := sim_func_args{adjacent_seats, 4, false}
+	part_2 := sim_func_args{adjacent_seats, 5, true}
 	run_sim(my_seatmap, 100, adjacent_seats, part_1)
 	run_sim(my_seatmap, 100, adjacent_seats, part_2)
-
 }
 
 type seatmap struct {
@@ -113,69 +112,77 @@ func next_seat(this_seat byte, num_adj_occupied int, num_adj_occupied_tolerance 
 	}
 }
 
-func sim_func_maker(adjacent_seats []Seat, num_adj_occupied_tolerance int, queen_vision bool) func(smap *seatmap) seatmap {
+type sim_func_args struct {
+	adjacent_seats             []Seat
+	num_adj_occupied_tolerance int
+	queen_vision               bool
+}
 
-	return func(smap *seatmap) seatmap {
-		/*
-			If a seat is empty (L) and there are no occupied seats adjacent to it, the seat becomes occupied.
-			If a seat is occupied (#) and four or more seats adjacent to it are also occupied, the seat becomes empty.
-			Otherwise, the seat's state does not change.
-			Floor (.) never changes; seats don't move, and nobody sits on the floor.
-		*/
+type sim_func interface {
+	get_next_state(smap *seatmap) seatmap
+}
 
-		var smap_new *seatmap = make_seatmap(smap.height, smap.width)
-		var coord Seat
-		var num_adj_occupied int
+func (a sim_func_args) get_next_state(smap *seatmap) seatmap {
 
-		for h := 0; h < smap.height; h++ {
-			for w := 0; w < smap.width; w++ {
+	/*
+		If a seat is empty (L) and there are no occupied seats adjacent to it, the seat becomes occupied.
+		If a seat is occupied (#) and four or more seats adjacent to it are also occupied, the seat becomes empty.
+		Otherwise, the seat's state does not change.
+		Floor (.) never changes; seats don't move, and nobody sits on the floor.
+	*/
 
-				num_adj_occupied = 0
-				seat_this := smap.seatmapstring[h][w]
+	var smap_new *seatmap = make_seatmap(smap.height, smap.width)
+	var coord Seat
+	var num_adj_occupied int
 
-				if queen_vision {
+	for h := 0; h < smap.height; h++ {
+		for w := 0; w < smap.width; w++ {
 
-					for _, adjacent_coordinate := range adjacent_seats {
-						coord.h = h
-						coord.w = w
-						// Check adjacent seat in direction of |adjacent_coordinate|.
-						for {
-							coord.h += adjacent_coordinate.h
-							coord.w += adjacent_coordinate.w
-							if coord.h >= smap.height || coord.h < 0 || coord.w >= smap.width || coord.w < 0 {
-								// out of seatmap
-								break
-							}
-							look_for_seat := smap.seatmapstring[coord.h][coord.w]
-							if look_for_seat == '#' {
-								// Adjacent seat is within range. Count it.
-								num_adj_occupied += 1
-								break
-							}
-							if look_for_seat == 'L' {
-								break
-							}
+			num_adj_occupied = 0
+			seat_this := smap.seatmapstring[h][w]
+
+			if a.queen_vision {
+
+				for _, adjacent_coordinate := range a.adjacent_seats {
+					coord.h = h
+					coord.w = w
+					// Check adjacent seat in direction of |adjacent_coordinate|.
+					for {
+						coord.h += adjacent_coordinate.h
+						coord.w += adjacent_coordinate.w
+						if coord.h >= smap.height || coord.h < 0 || coord.w >= smap.width || coord.w < 0 {
+							// out of seatmap
+							break
 						}
-					}
-				} else {
-					// Count number of occupied adjacent seats.
-					for _, coordinate := range adjacent_seats {
-						if (h+coordinate.h < smap.height && h+coordinate.h >= 0) && (w+coordinate.w < smap.width && w+coordinate.w >= 0) {
-							adjacent_seat := smap.seatmapstring[h+coordinate.h][w+coordinate.w]
-							if adjacent_seat == '#' {
-								num_adj_occupied += 1
-							}
+						look_for_seat := smap.seatmapstring[coord.h][coord.w]
+						if look_for_seat == '#' {
+							// Adjacent seat is within range. Count it.
+							num_adj_occupied += 1
+							break
+						}
+						if look_for_seat == 'L' {
+							break
 						}
 					}
 				}
-
-				// Assign new seat state according to seatmap logic.
-				smap_new.seatmapstring[h][w] = next_seat(seat_this, num_adj_occupied, num_adj_occupied_tolerance)
-
+			} else {
+				// Count number of occupied adjacent seats.
+				for _, coordinate := range a.adjacent_seats {
+					if (h+coordinate.h < smap.height && h+coordinate.h >= 0) && (w+coordinate.w < smap.width && w+coordinate.w >= 0) {
+						adjacent_seat := smap.seatmapstring[h+coordinate.h][w+coordinate.w]
+						if adjacent_seat == '#' {
+							num_adj_occupied += 1
+						}
+					}
+				}
 			}
+
+			// Assign new seat state according to seatmap logic.
+			smap_new.seatmapstring[h][w] = next_seat(seat_this, num_adj_occupied, a.num_adj_occupied_tolerance)
+
 		}
-		return *smap_new
 	}
+	return *smap_new
 
 }
 
@@ -192,7 +199,7 @@ func num_occupied_seats(smap seatmap) int {
 	return count
 }
 
-func run_sim(smap seatmap, sim_step_limit int, adjacent_seats []Seat, sim_func func(smap *seatmap) seatmap) {
+func run_sim(smap seatmap, sim_step_limit int, adjacent_seats []Seat, sf sim_func) {
 
 	// Simulate seat popluation over time.
 	var new_state *seatmap = make_seatmap(smap.height, smap.width)
@@ -202,7 +209,7 @@ func run_sim(smap seatmap, sim_step_limit int, adjacent_seats []Seat, sim_func f
 	*old_state = smap
 
 	for x := 0; x < sim_step_limit; x++ {
-		*new_state = sim_func(old_state)
+		*new_state = sf.get_next_state(old_state)
 		if seatmap_equal(old_state, new_state) {
 			break
 		}
