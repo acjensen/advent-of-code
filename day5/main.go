@@ -1,4 +1,4 @@
-// this is a work in progress
+// THE GO SOLUTION IS A WORK In PROGRESS
 
 package main
 
