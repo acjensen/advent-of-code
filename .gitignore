@@ -1,2 +1,11 @@
+# Python
 __pycache__
+
+# MacOS
 .DS_Store
+
+# Rust
+target
+
+# IDE
+.vscode
