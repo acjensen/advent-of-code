@@ -9,3 +9,6 @@ target
 
 # IDE
 .vscode
+
+# Bazel
+bazel-*
