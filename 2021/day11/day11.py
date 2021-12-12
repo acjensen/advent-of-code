@@ -4,83 +4,81 @@ from collections import deque
 def parse(txt_file):
     filename = os.path.join(os.path.dirname(__file__), txt_file)
     f = open(filename)
-    input = [[int(c) for c in l if c != '\n'] for l in f.readlines()]
-    height = len(input)
-    width = len(input[0])
+    matrix = [[int(c) for c in l if c != '\n'] for l in f.readlines()]
+    height = len(matrix)
+    width = len(matrix[0])
     f.close()
-    return input, height, width
+    return matrix, height, width
 
 
-def main(txt_file, num_steps, is_part_2):
+def adjacent(coord, width, height):
+    result = []
+    for offset in [
+        (-1, -1), (0, -1), (1, -1),
+        (-1,  0),          (1,  0),
+        (-1,  1), (0,  1), (1,  1),
+    ]:
+        x, y = adj_coord = (coord[0] + offset[0], coord[1] + offset[1])
+        if x >= 0 and x < width and y >= 0 and y < height:
+            result.append(adj_coord)
+    return result
 
-    b, height, width = parse(txt_file)
 
-    def adjacent(pair):
-        result = []
-        for p in [
-            (-1, -1), (0, -1), (1, -1),
-            (-1, 0 ), (1, 0 ),
-            (-1, 1 ), (0, 1 ), (1, 1),
-        ]:
-            new_p = (pair[0] + p[0], pair[1] + p[1])
-            px = new_p[0]
-            py = new_p[1]
-            if px >= 0 and px < width and py >= 0 and py < height:
-                result.append(new_p)
-        return result
-        
-    
-    def step(b):
+def solve(txt_file, num_steps, is_part_2):
 
-        stack = deque()
+    m, height, width = parse(txt_file)
+
+    def step(m):
+
+        stack = [] 
         flashed = set()
 
-        for x, l in enumerate(b):
-            for y, o in enumerate(l):
+        for x in range(width):
+            for y in range(height):
                 stack.append((x, y))
     
         while stack:
-            pair = stack.popleft()
-            x, y = pair
-            b[x][y] += 1
-            if b[x][y] > 9 and pair not in flashed:
-                stack += [p for p in adjacent(pair) if p not in flashed]
-                flashed.add(pair)
+            coord = stack.pop()
+            x, y = coord
+            m[x][y] += 1
+            if m[x][y] > 9 and coord not in flashed:
+                stack += [c for c in adjacent(coord, width, height) if c not in flashed]
+                flashed.add(coord)
 
-        for f in flashed:
-            x, y = f
-            b[x][y] = 0
+        for (x, y) in flashed:
+            m[x][y] = 0
 
-        num_flashed = len(flashed)
-        return num_flashed
+        return len(flashed) 
 
-    def part1(num_steps):
+
+    def part1():
+
         flash_count = 0
         for _ in range(num_steps):
-            flash_count += step(b)
+            flash_count += step(m)
         return flash_count
 
-    def part2(num_steps):
 
-        def all_flashed(b):
+    def part2():
+
+        def all_flashed(m):
             for x in range(width):
                 for y in range(height): 
-                    if b[x][y] != 0:
+                    if m[x][y] != 0:
                         return False 
             return True
 
         for step_idx in range(num_steps):
-            step(b)
-            if all_flashed(b):
+            step(m)
+            if all_flashed(m):
                 return step_idx + 1
 
         return None
 
-
     if is_part_2:
-        print(part2(num_steps))
+        print(part2())
     else:
-        print(part1(num_steps))
+        print(part1())
 
 for input_txt, num_steps, is_part_2 in [ 
     ('test_input.txt', 100, False),
@@ -89,4 +87,4 @@ for input_txt, num_steps, is_part_2 in [
     ('test_input.txt', 1000000, True),
     ('input.txt', 10000000, True),
 ]:
-    main(input_txt, num_steps, is_part_2)
+    solve(input_txt, num_steps, is_part_2)
