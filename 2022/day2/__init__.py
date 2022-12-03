@@ -62,6 +62,5 @@ def parse(input_txt):
 
 print('part1:', part1(parse("2022/day2/example_input.txt")))
 print('part1:', part1(parse("2022/day2/input.txt")))
-
 print('part2:', part2(parse("2022/day2/example_input.txt")))
 print('part2:', part2(parse("2022/day2/input.txt")))
