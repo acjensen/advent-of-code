@@ -61,37 +61,80 @@ def part2():
             edge_points.add(p)
 
     lines = parse(file)
-    # only need to check just outside the range of each beacon!
-    # in fact, it should be surrounded on all sides....
-    edge_points = set()
+
+    stuff = []
     for line in lines:
-        sensor, beacon = line
-        md = manhattan_distance(sensor, beacon) + 1
-        # if point in 0, 4000000:
-        between = range(0, md + 1)
-        points = set()
-        for a, b in zip(between, reversed(between)):
-            add_if_in_box(points, Point(sensor.x + a, sensor.y + b))
-            add_if_in_box(points, Point(sensor.x - a, sensor.y + b))
-            add_if_in_box(points, Point(sensor.x + a, sensor.y - b))
-            add_if_in_box(points, Point(sensor.x - a, sensor.y - b))
-            edge_points.update(points)
-        # print()
+        s, b = line
+        md = manhattan_distance(s, b) + 1
+        # vertical, horizontal
+        outer_lines = (s.x + md, s.x - md, s.y + md, s.y - md)
+        stuff.append((s, b, md, outer_lines))
 
-    # print(edge_points)
-    potential = edge_points.copy()
-    for point in edge_points:
-        for line in lines:
-            s, b = line
-            if manhattan_distance(s, point) <= manhattan_distance(s, b):
-                if point == Point(14, 11):
-                    print("???")
-                if point in potential: potential.remove(point)
+    for line in stuff:
+        s, b, md, outer_lines = line
+        print(outer_lines)
 
-    print(potential)
+    x_pairs = set()
+    for line in stuff:
+        s, b, md, outer_lines = line
+        for line2 in stuff:
+            _, _, _, outer_lines_2 = line2
+            if outer_lines[0] == outer_lines_2[1]:
+                x = outer_lines[0]
+                a, b, c, d = outer_lines[3], outer_lines[2], outer_lines_2[3], outer_lines_2[2] 
+                if a <= d and b >= c:
+                    yrange = max(a,c), min(b,d)
+                    x_pairs.add((x, yrange))
 
-        
-part2()
+    y_pairs = set()
+    for line in stuff:
+        s, b, md, outer_lines = line
+        for line2 in stuff:
+            _, _, _, outer_lines_2 = line2
+            if outer_lines_2[2] == outer_lines[3]:
+                y = outer_lines_2[2]
+                a, b, c, d = outer_lines[1], outer_lines[0], outer_lines_2[1], outer_lines_2[0] 
+                if a <= d and b >= c:
+                    xrange = max(a,c), min(b,d)
+                    y_pairs.add((y, xrange))
+    
+
+    for xpair in x_pairs:
+        for ypair in y_pairs:
+            x, yrange = xpair
+            y, xrange = ypair
+            if x in xrange and y in yrange:
+                print(((y+1)*4000000+(x+1)))
+            # if x_outer_lines[0]
+            # if (
+            #     # both lines that matched on x are within the x of the lines that matched on y
+            #     x_outer_lines[0] >= y_outer_lines[0]
+            #     x_outer_lines[0] >= y_outer_lines[1]
+            #     x_outer_lines_2
+            # ):
+            #     print("YAY")
+
+
+    def within_any(point):
+        for line in stuff:
+            s, b, md, outer_lines = line
+            if manhattan_distance(s, point) < md:
+                return True
+        return False
+
+    xans, yans = None, None
+
+    for x in range(0, 4000000):
+        y = 4000000
+        if not within_any(Point(x, y)):
+            return (x, y)
+
+    for y in range(0, 4000000):
+        x = 4000000
+        if not within_any(Point(x, y)):
+            return (x, y)
+
+print(part2())
 
 # def part2():
 

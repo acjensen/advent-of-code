@@ -12,3 +12,6 @@ target
 
 # Bazel
 bazel-*
+
+# Puzzle answers
+part_*_answer
